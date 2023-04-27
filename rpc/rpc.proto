@@ -12,7 +12,10 @@ message Request {
 		Data data = 3;
 		End end = 4;
 	}
+    string reply = 5;
+    string method = 6;
 }
+
 
 message Response {
 	oneof type {
@@ -44,11 +47,9 @@ message Begin {
 
 message Data {
 	bytes data = 1;
-    string reply = 2;
 }
 
 message End {
 	google.rpc.Status status = 1;
 	Metadata trailer = 2;
-    string reply = 3;
 }

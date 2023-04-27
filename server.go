@@ -103,8 +103,8 @@ func NewServer(r *redis.Client, nid string) *Server {
 		streams:  make(map[string]*serverStream),
 		subs:     make(map[string]*redis.PubSub),
 		services: make(map[string]*serviceInfo),
-		// log:      log.NewLoggerWithFields(log.InfoLevel, "nats-grpc.Server", log.Fields{"self-nid": nid}),
-		nid: nid,
+		log:      logrus.New(),
+		nid:      nid,
 	}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
 	return s
@@ -140,7 +140,7 @@ func (s *Server) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
 		prefix = fmt.Sprintf("redisrpc.%v.%v", s.nid, sd.ServiceName)
 	}
 	subject := prefix
-	s.log.Infof("QueueSubscribe: subject => %v", subject)
+	s.log.Infof("Subscribe: topic => %v", subject)
 	sub := s.redis.Subscribe(s.ctx, subject)
 	ch := sub.Channel()
 	go func() {
@@ -218,27 +218,15 @@ func (s *Server) GetServiceInfo() map[string]grpc.ServiceInfo {
 
 func (s *Server) onMessage(msg *redis.Message) {
 	//p.log.Infof("Proxy.onMessage: subject %v, replay %v, data %v", msg.Subject, msg.Reply, string(msg.Data))
-	method := msg.Channel
-	log := s.log.WithField("method", method)
-
 	request := &rpc.Request{}
 	err := proto.Unmarshal([]byte(msg.Payload), request)
 	if err != nil {
 		s.log.WithField("data", string(msg.Payload)).Error("unknown message")
 	}
-	var reply string
-	switch r := request.Type.(type) {
-	case *rpc.Request_Call:
-		reply = r.Call.Reply
+	method := request.Method
+	log := s.log.WithField("method", method)
 
-	case *rpc.Request_Data:
-		reply = r.Data.Reply
-
-	case *rpc.Request_End:
-		reply = r.End.Reply
-
-	}
-
+	reply := request.Reply
 	s.mu.Lock()
 	stream, ok := s.streams[reply]
 	if !ok {

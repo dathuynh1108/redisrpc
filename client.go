@@ -36,6 +36,7 @@ func NewClient(redis *redis.Client, svcid string, nid string) *Client {
 		svcid:   svcid,
 		nid:     nid,
 		streams: make(map[string]*clientStream),
+		log:     logrus.New(),
 	}
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 	return c
@@ -79,8 +80,12 @@ func (c *Client) Invoke(ctx context.Context, method string, args interface{}, re
 	if len(c.svcid) > 0 {
 		prefix = fmt.Sprintf("redisrpc.%v", c.svcid)
 	}
-	subj := prefix + strings.ReplaceAll(method, "/", ".")
-	stream := newClientStream(ctx, c, subj, c.log, opts...)
+	i := strings.LastIndex(method, "/") // Method name (without service name) is the last part
+	serviceName := method[:i+1]
+	methodName := prefix + strings.ReplaceAll(method, "/", ".")
+	subj := prefix + strings.ReplaceAll(serviceName, "/", ".")
+
+	stream := newClientStream(ctx, c, subj, methodName, c.log, opts...)
 	c.mu.Lock()
 	c.streams[stream.reply] = stream
 	c.mu.Unlock()
@@ -93,8 +98,11 @@ func (c *Client) NewStream(ctx context.Context, desc *grpc.StreamDesc, method st
 	if len(c.svcid) > 0 {
 		prefix = fmt.Sprintf("redisrpc.%v", c.svcid)
 	}
-	subj := prefix + strings.ReplaceAll(method, "/", ".")
-	stream := newClientStream(ctx, c, subj, c.log, opts...)
+	i := strings.LastIndex(method, "/") // Method name (without service name) is the last part
+	serviceName := method[:i+1]
+	methodName := prefix + strings.ReplaceAll(method, "/", ".")
+	subj := prefix + strings.ReplaceAll(serviceName, "/", ".")
+	stream := newClientStream(ctx, c, subj, methodName, c.log, opts...)
 	c.mu.Lock()
 	c.streams[stream.reply] = stream
 	c.mu.Unlock()
@@ -111,7 +119,9 @@ type clientStream struct {
 	log     *logrus.Logger
 	client  *Client
 	subject string
-	reply   string
+
+	methodName string
+	reply      string
 
 	msgCh <-chan *redis.Message
 	sub   *redis.PubSub
@@ -123,13 +133,14 @@ type clientStream struct {
 	pnid      string
 }
 
-func newClientStream(ctx context.Context, client *Client, subj string, log *logrus.Logger, opts ...grpc.CallOption) *clientStream {
+func newClientStream(ctx context.Context, client *Client, subj, methodName string, log *logrus.Logger, opts ...grpc.CallOption) *clientStream {
 	stream := &clientStream{
-		client:  client,
-		log:     log,
-		subject: subj,
-		reply:   uuid.NewString(),
-		closed:  false,
+		client:     client,
+		log:        log,
+		subject:    subj,
+		methodName: methodName,
+		reply:      uuid.NewString(),
+		closed:     false,
 	}
 	stream.ctx, stream.cancel = context.WithCancel(ctx)
 
@@ -352,6 +363,7 @@ func (c *clientStream) writeRequest(request *rpc.Request) error {
 	if err != nil {
 		return err
 	}
+	c.log.Infof("Publish to: %v", c.subject)
 	return c.client.redis.Publish(c.ctx, c.subject, data).Err()
 }
 

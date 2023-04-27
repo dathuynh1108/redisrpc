@@ -1,0 +1,13 @@
+version: '3'
+services:
+  redis:
+    image: "redis"
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory-policy allkeys-lru --maxmemory 4G
+    restart: always
+    volumes:
+      - redis-data:/data
+  
+volumes:
+  redis-data:
