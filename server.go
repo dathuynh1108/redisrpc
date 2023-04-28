@@ -140,7 +140,7 @@ func (s *Server) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
 		prefix = fmt.Sprintf("redisrpc.%v.%v", s.nid, sd.ServiceName)
 	}
 	subject := prefix
-	s.log.Infof("Subscribe: topic => %v", subject)
+	s.log.Infof("Subscribe: subject => %v", subject)
 	sub := s.redis.Subscribe(s.ctx, subject)
 	ch := sub.Channel()
 	go func() {
@@ -223,10 +223,12 @@ func (s *Server) onMessage(msg *redis.Message) {
 	if err != nil {
 		s.log.WithField("data", string(msg.Payload)).Error("unknown message")
 	}
+
 	method := request.Method
+	reply := request.Reply
+
 	log := s.log.WithField("method", method)
 
-	reply := request.Reply
 	s.mu.Lock()
 	stream, ok := s.streams[reply]
 	if !ok {

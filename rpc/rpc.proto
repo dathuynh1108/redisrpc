@@ -13,7 +13,7 @@ message Request {
 		End end = 4;
 	}
     string reply = 5;
-    string method = 6;
+	string method = 6;
 }
 
 
@@ -34,7 +34,6 @@ message Metadata {
 }
 
 message Call {
-	string method = 1;
 	Metadata metadata = 2;
 	string nid = 3;
     string reply = 4;
@@ -46,10 +45,10 @@ message Begin {
 }
 
 message Data {
-	bytes data = 1;
+	bytes data = 2;
 }
 
 message End {
-	google.rpc.Status status = 1;
-	Metadata trailer = 2;
+	google.rpc.Status status = 2;
+	Metadata trailer = 3;
 }

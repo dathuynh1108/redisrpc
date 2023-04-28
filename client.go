@@ -80,9 +80,12 @@ func (c *Client) Invoke(ctx context.Context, method string, args interface{}, re
 	if len(c.svcid) > 0 {
 		prefix = fmt.Sprintf("redisrpc.%v", c.svcid)
 	}
-	i := strings.LastIndex(method, "/") // Method name (without service name) is the last part
-	serviceName := method[:i+1]
+	// Method name (without service name) is the last part
+	i := strings.LastIndex(method, "/")
 	methodName := prefix + strings.ReplaceAll(method, "/", ".")
+
+	// Subject is service name
+	serviceName := method[:i]
 	subj := prefix + strings.ReplaceAll(serviceName, "/", ".")
 
 	stream := newClientStream(ctx, c, subj, methodName, c.log, opts...)
@@ -98,10 +101,15 @@ func (c *Client) NewStream(ctx context.Context, desc *grpc.StreamDesc, method st
 	if len(c.svcid) > 0 {
 		prefix = fmt.Sprintf("redisrpc.%v", c.svcid)
 	}
-	i := strings.LastIndex(method, "/") // Method name (without service name) is the last part
-	serviceName := method[:i+1]
+
+	// Method name (without service name) is the last part
+	i := strings.LastIndex(method, "/")
 	methodName := prefix + strings.ReplaceAll(method, "/", ".")
+
+	// Subject is service name
+	serviceName := method[:i]
 	subj := prefix + strings.ReplaceAll(serviceName, "/", ".")
+
 	stream := newClientStream(ctx, c, subj, methodName, c.log, opts...)
 	c.mu.Lock()
 	c.streams[stream.reply] = stream
@@ -275,8 +283,7 @@ func (c *clientStream) SendMsg(m interface{}) error {
 	if !c.hasBegun {
 		c.hasBegun = true
 		call := &rpc.Call{
-			Method: c.subject,
-			Nid:    c.client.nid,
+			Nid: c.client.nid,
 		}
 		if c.md != nil {
 			call.Metadata = MakeMetadata(*c.md)
@@ -332,9 +339,7 @@ func (c *clientStream) Invoke(ctx context.Context, method string, args interface
 	}
 
 	//write call with metatdata
-	call := &rpc.Call{
-		Method: method,
-	}
+	call := &rpc.Call{}
 	if c.md != nil {
 		call.Metadata = MakeMetadata(*c.md)
 	}
@@ -372,6 +377,8 @@ func (c *clientStream) writeCall(call *rpc.Call) error {
 		Type: &rpc.Request_Call{
 			Call: call,
 		},
+		Method: c.methodName,
+		Reply:  c.reply,
 	})
 }
 
@@ -380,6 +387,8 @@ func (c *clientStream) writeData(data *rpc.Data) error {
 		Type: &rpc.Request_Data{
 			Data: data,
 		},
+		Method: c.methodName,
+		Reply:  c.reply,
 	})
 }
 
@@ -388,6 +397,8 @@ func (c *clientStream) writeEnd(end *rpc.End) error {
 		Type: &rpc.Request_End{
 			End: end,
 		},
+		Method: c.methodName,
+		Reply:  c.reply,
 	})
 }
 
