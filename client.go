@@ -368,7 +368,6 @@ func (c *clientStream) writeRequest(request *rpc.Request) error {
 	if err != nil {
 		return err
 	}
-	c.log.Infof("Publish to: %v", c.subject)
 	return c.client.redis.Publish(c.ctx, c.subject, data).Err()
 }
 

@@ -145,7 +145,6 @@ func (s *Server) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
 	ch := sub.Channel()
 	go func() {
 		for msg := range ch {
-			s.log.Infof("Received message: %v", msg)
 			s.onMessage(msg)
 		}
 	}()

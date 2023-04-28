@@ -31,9 +31,10 @@ func Test(t *testing.T) {
 	testServer := &testgrpc.Server{}
 	testgrpc.RegisterTestServerServer(service, testServer)
 
+	startTime := time.Now()
 	cli := testgrpc.NewTestServerClient(NewClient(r, "node_01", "node_01"))
 	res, err := cli.MakeRequest(ctx, &testgrpc.Request{
 		Message: "Dat",
 	})
-	fmt.Println(res)
+	fmt.Println(res, "request take:", time.Since(startTime))
 }
