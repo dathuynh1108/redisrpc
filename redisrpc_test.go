@@ -3,10 +3,10 @@ package redisrpc
 import (
 	"context"
 	"fmt"
-	"redisrpc/testgrpc"
 	"testing"
 	"time"
 
+	"github.com/dathuynh1108/redisrpc/testgrpc"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -1,8 +1,7 @@
 package redisrpc
 
 import (
-	"redisrpc/rpc"
-
+	"github.com/dathuynh1108/redisrpc/rpc"
 	"google.golang.org/grpc/metadata"
 )
 

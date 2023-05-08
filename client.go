@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"redisrpc/rpc"
+
+	"github.com/dathuynh1108/redisrpc/rpc"
+
 	"strings"
 	"sync"
 
