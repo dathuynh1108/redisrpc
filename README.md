@@ -1,2 +1,2 @@
 # redisrpc
-Based on github.com/cloudwebrtc/nats-grpc but uses redis instead of NATs
+Based on [a link](github.com/cloudwebrtc/nats-grpc) but uses redis instead of NATs
