@@ -273,7 +273,8 @@ func (c *clientStream) done() error {
 		c.log.Debugf("Client is cleaning up redis connection")
 		c.closed = true
 		c.cancel()
-		err := c.sub.Unsubscribe(c.ctx, c.reply)
+		// Use background context to unsubscribe for sure that this connection will be closed
+		err := c.sub.Unsubscribe(context.Background(), c.reply)
 		// close(c.msgCh)
 		c.client.remove(c.subject)
 		return err
@@ -377,7 +378,8 @@ func (c *clientStream) writeRequest(request *rpc.Request) error {
 		return err
 	}
 	c.log.Debugf("Publish request %v to subject: %v", string(data), c.subject)
-	return c.client.redis.Publish(c.ctx, c.subject, string(data)).Err()
+	// Send message with context background for sure the message is sent to server in all case
+	return c.client.redis.Publish(context.Background(), c.subject, string(data)).Err()
 }
 
 func (c *clientStream) writeCall(call *rpc.Call) error {

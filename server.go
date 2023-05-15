@@ -462,7 +462,8 @@ func (s *serverStream) writeResponse(response *rpc.Response) error {
 	if err != nil {
 		return err
 	}
-	return s.server.redis.Publish(s.ctx, s.reply, data).Err()
+	// Send message with context background for sure the message is sent to client in all case
+	return s.server.redis.Publish(context.Background(), s.reply, data).Err()
 }
 
 func (s *serverStream) writeBegin(begin *rpc.Begin) error {
