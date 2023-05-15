@@ -147,6 +147,7 @@ func (s *Server) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
 	ch := sub.Channel()
 	go func() {
 		for msg := range ch {
+			s.log.Debugf("Received message: %v", msg)
 			s.onMessage(msg)
 		}
 	}()
@@ -339,6 +340,7 @@ func (s *serverStream) processData(data *rpc.Data) {
 }
 
 func (s *serverStream) processEnd(end *rpc.End) {
+	s.log.Infof("Received End from client: %v")
 	if end.Status != nil {
 		s.log.WithField("status", end.Status).Info("cancel")
 		s.done()

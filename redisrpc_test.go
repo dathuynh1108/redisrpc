@@ -10,7 +10,7 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func Test(t *testing.T) {
+func Test_0(t *testing.T) {
 	ctx := context.Background()
 	r := redis.NewClient(
 		&redis.Options{
