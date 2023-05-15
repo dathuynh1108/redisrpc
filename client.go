@@ -374,7 +374,7 @@ func (c *clientStream) writeRequest(request *rpc.Request) error {
 		return err
 	}
 	c.log.Debugf("Publish request %v to subject: %v", string(data), c.subject)
-	return c.client.redis.Publish(c.ctx, c.subject, data).Err()
+	return c.client.redis.Publish(c.ctx, c.subject, string(data)).Err()
 }
 
 func (c *clientStream) writeCall(call *rpc.Call) error {
