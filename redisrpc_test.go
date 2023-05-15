@@ -8,6 +8,7 @@ import (
 
 	"github.com/dathuynh1108/redisrpc/testgrpc"
 	"github.com/redis/go-redis/v9"
+	"github.com/sirupsen/logrus"
 )
 
 func Test_0(t *testing.T) {
@@ -27,12 +28,12 @@ func Test_0(t *testing.T) {
 		return
 	}
 
-	service := NewServer(r, "node_01")
+	service := NewServer(r, "node_01", logrus.StandardLogger())
 	testServer := &testgrpc.Server{}
 	testgrpc.RegisterTestServerServer(service, testServer)
 
 	startTime := time.Now()
-	cli := testgrpc.NewTestServerClient(NewClient(r, "node_01", "node_01"))
+	cli := testgrpc.NewTestServerClient(NewClient(r, "node_01", "node_01", logrus.StandardLogger()))
 	res, err := cli.MakeRequest(ctx, &testgrpc.Request{
 		Message: "Dat",
 	})

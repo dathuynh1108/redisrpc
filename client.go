@@ -32,13 +32,13 @@ type Client struct {
 	mu      sync.Mutex
 }
 
-func NewClient(redis *redis.Client, svcid string, nid string) *Client {
+func NewClient(redis *redis.Client, svcid string, nid string, log *logrus.Logger) *Client {
 	c := &Client{
 		redis:   redis,
 		svcid:   svcid,
 		nid:     nid,
 		streams: make(map[string]*clientStream),
-		log:     logrus.New(),
+		log:     log,
 	}
 	c.ctx, c.cancel = context.WithCancel(context.Background())
 	return c
@@ -267,6 +267,7 @@ func (c *clientStream) ReadMsg() error {
 
 func (c *clientStream) done() error {
 	if !c.closed {
+		c.log.Debugf("Client is cleaning up redis connection")
 		c.closed = true
 		c.cancel()
 		err := c.sub.Unsubscribe(c.ctx, c.reply)
@@ -316,6 +317,7 @@ func (c *clientStream) SendMsg(m interface{}) error {
 func (c *clientStream) RecvMsg(m interface{}) error {
 	select {
 	case <-c.ctx.Done():
+		c.log.Debugf("End by context canceled")
 		if c.lastErr != nil {
 			return c.lastErr
 		}
@@ -329,6 +331,7 @@ func (c *clientStream) RecvMsg(m interface{}) error {
 				return proto.Unmarshal(bytes, m.(proto.Message))
 			}
 		}
+		c.log.Debugf("End by EOF")
 		return io.EOF
 	}
 }
@@ -370,7 +373,7 @@ func (c *clientStream) writeRequest(request *rpc.Request) error {
 	if err != nil {
 		return err
 	}
-	c.log.Debugf("Publish request %v to %v", string(data), c.subject)
+	c.log.Debugf("Publish request %v to subject: %v", string(data), c.subject)
 	return c.client.redis.Publish(c.ctx, c.subject, data).Err()
 }
 

@@ -98,14 +98,14 @@ type Server struct {
 }
 
 // NewServer creates a new Proxy
-func NewServer(r *redis.Client, nid string) *Server {
+func NewServer(r *redis.Client, nid string, log *logrus.Logger) *Server {
 	s := &Server{
 		redis:    r,
 		handlers: make(map[string]handlerFunc),
 		streams:  make(map[string]*serverStream),
 		subs:     make(map[string]*redis.PubSub),
 		services: make(map[string]*serviceInfo),
-		log:      logrus.New(),
+		log:      log,
 		nid:      nid,
 	}
 	s.ctx, s.cancel = context.WithCancel(context.Background())
