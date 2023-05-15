@@ -206,7 +206,7 @@ func (c *clientStream) Trailer() metadata.MD {
 }
 
 func (c *clientStream) CloseSend() error {
-	// c.log.Infof("Client CloseSend %s", c.subject)
+	c.log.Infof("Client CloseSend %s", c.subject)
 	c.writeEnd(&rpc.End{
 		Status: status.Convert(nil).Proto(),
 	})
