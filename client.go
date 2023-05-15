@@ -207,9 +207,12 @@ func (c *clientStream) Trailer() metadata.MD {
 
 func (c *clientStream) CloseSend() error {
 	c.log.Infof("Client CloseSend %s", c.subject)
-	c.writeEnd(&rpc.End{
+	err := c.writeEnd(&rpc.End{
 		Status: status.Convert(nil).Proto(),
 	})
+	if err != nil {
+		c.log.Errorf("Cannot send close message: %v", err.Error())
+	}
 	return c.done()
 }
 
