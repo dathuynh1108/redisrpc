@@ -85,7 +85,7 @@ type serviceInfo struct {
 
 // Server is the interface to gRPC over NATS
 type Server struct {
-	redis    *redis.Client
+	redis    redis.UniversalClient
 	ctx      context.Context
 	cancel   context.CancelFunc
 	log      *logrus.Logger
@@ -98,7 +98,7 @@ type Server struct {
 }
 
 // NewServer creates a new Proxy
-func NewServer(r *redis.Client, nid string, log *logrus.Logger) *Server {
+func NewServer(r redis.UniversalClient, nid string, log *logrus.Logger) *Server {
 	s := &Server{
 		redis:    r,
 		handlers: make(map[string]handlerFunc),
@@ -349,7 +349,7 @@ func (s *serverStream) processEnd(end *rpc.End) {
 		s.messageMutex.Lock()
 		defer s.messageMutex.Unlock()
 
-		s.log.Debug("closeSend")
+		s.log.Debug("Close recv channel")
 		s.recvWrite <- nil
 		close(s.recvWrite)
 		s.recvWrite = nil

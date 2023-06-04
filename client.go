@@ -22,7 +22,7 @@ import (
 )
 
 type Client struct {
-	redis   *redis.Client
+	redis   redis.UniversalClient
 	ctx     context.Context
 	cancel  context.CancelFunc
 	log     *logrus.Logger
@@ -32,7 +32,7 @@ type Client struct {
 	mu      sync.Mutex
 }
 
-func NewClient(redis *redis.Client, svcid string, nid string, log *logrus.Logger) *Client {
+func NewClient(redis redis.UniversalClient, svcid string, nid string, log *logrus.Logger) *Client {
 	c := &Client{
 		redis:   redis,
 		svcid:   svcid,
@@ -44,26 +44,27 @@ func NewClient(redis *redis.Client, svcid string, nid string, log *logrus.Logger
 	return c
 }
 
-func (p *Client) GetServiceId() string {
-	return p.svcid
+// GetServiceId return the service id of the client
+func (c *Client) GetServiceId() string {
+	return c.svcid
 }
 
 // Close gracefully stops a Client
-func (p *Client) Close() error {
-	p.cancel()
-	for name, st := range p.streams {
+func (c *Client) Close() error {
+	c.cancel()
+	for name, st := range c.streams {
 		err := st.done()
 		if err != nil {
-			p.log.Errorf("Unsubscribe [%v] failed %v", name, err)
+			c.log.Errorf("Unsubscribe [%v] failed %v", name, err)
 			return err
 		}
 	}
 	return nil
 }
 
-func (p *Client) CloseStream(nid string) bool {
-	if p.svcid == nid {
-		p.Close()
+func (c *Client) CloseStream(nid string) bool {
+	if c.svcid == nid {
+		c.Close()
 		return true
 	}
 	return false
