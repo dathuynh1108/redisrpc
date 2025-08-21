@@ -379,8 +379,8 @@ func (c *clientStream) writeRequest(request *rpc.Request) error {
 		return err
 	}
 	c.log.Debugf("Publish request %v to subject: %v", string(data), c.subject)
-	// Send message with context background for sure the message is sent to server in all case
-	return c.client.redis.Publish(context.Background(), c.subject, string(data)).Err()
+	// Send message without cancel for sure the message is sent to server in all case
+	return c.client.redis.Publish(context.WithoutCancel(c.ctx), c.subject, string(data)).Err()
 }
 
 func (c *clientStream) writeCall(call *rpc.Call) error {

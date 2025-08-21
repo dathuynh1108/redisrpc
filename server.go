@@ -44,12 +44,11 @@ func (s *serverTransportStream) SetTrailer(md metadata.MD) error {
 
 func serverUnaryHandler(srv interface{}, handler serverMethodHandler) handlerFunc {
 	return func(s *serverStream) {
-		var interceptor grpc.UnaryServerInterceptor = nil
 		ctx := grpc.NewContextWithServerTransportStream(s.Context(), &serverTransportStream{stream: s})
 		if s.md != nil {
 			ctx = metadata.NewIncomingContext(ctx, s.md)
 		}
-		response, err := handler(srv, ctx, s.RecvMsg, interceptor)
+		response, err := handler(srv, ctx, s.RecvMsg, s.server.opts.unaryInt)
 		if s.ctx.Err() == nil {
 			if err != nil {
 				s.close(err)
@@ -62,9 +61,19 @@ func serverUnaryHandler(srv interface{}, handler serverMethodHandler) handlerFun
 	}
 }
 
-func serverStreamHandler(srv interface{}, handler grpc.StreamHandler) handlerFunc {
+func serverStreamHandler(srv interface{}, sd grpc.StreamDesc, handler grpc.StreamHandler) handlerFunc {
 	return func(s *serverStream) {
-		err := handler(srv, s)
+		var err error
+		if s.server.opts.streamInt == nil {
+			err = handler(srv, s)
+		} else {
+			info := &grpc.StreamServerInfo{
+				FullMethod:     s.Method(),
+				IsClientStream: sd.ClientStreams,
+				IsServerStream: sd.ServerStreams,
+			}
+			err = s.server.opts.streamInt(srv, s, info, handler)
+		}
 		if s.ctx.Err() == nil {
 			s.close(err)
 		}
@@ -83,6 +92,34 @@ type serviceInfo struct {
 	mdata       interface{}
 }
 
+// A ServerOption sets options such as credentials, codec and keepalive parameters, etc.
+type ServerOption interface {
+	apply(*serverOptions)
+}
+
+// funcServerOption wraps a function that modifies serverOptions into an
+// implementation of the ServerOption interface.
+type funcServerOption struct {
+	f func(*serverOptions)
+}
+
+func (fdo *funcServerOption) apply(do *serverOptions) {
+	fdo.f(do)
+}
+
+func newFuncServerOption(f func(*serverOptions)) *funcServerOption {
+	return &funcServerOption{
+		f: f,
+	}
+}
+
+type serverOptions struct {
+	unaryInt        grpc.UnaryServerInterceptor
+	streamInt       grpc.StreamServerInterceptor
+	chainUnaryInts  []grpc.UnaryServerInterceptor
+	chainStreamInts []grpc.StreamServerInterceptor
+}
+
 // Server is the interface to gRPC over NATS
 type Server struct {
 	redis    redis.UniversalClient
@@ -95,10 +132,11 @@ type Server struct {
 	subs     map[string]*redis.PubSub
 	nid      string
 	services map[string]*serviceInfo // service name -> service info
+	opts     *serverOptions
 }
 
 // NewServer creates a new Proxy
-func NewServer(r redis.UniversalClient, nid string, log *logrus.Logger) *Server {
+func NewServer(ctx context.Context, r redis.UniversalClient, nid string, log *logrus.Logger) *Server {
 	s := &Server{
 		redis:    r,
 		handlers: make(map[string]handlerFunc),
@@ -108,7 +146,7 @@ func NewServer(r redis.UniversalClient, nid string, log *logrus.Logger) *Server 
 		log:      log,
 		nid:      nid,
 	}
-	s.ctx, s.cancel = context.WithCancel(context.Background())
+	s.ctx, s.cancel = context.WithCancel(ctx)
 	return s
 }
 
@@ -161,7 +199,7 @@ func (s *Server) RegisterService(sd *grpc.ServiceDesc, ss interface{}) {
 	for _, it := range sd.Streams {
 		desc := it
 		path := fmt.Sprintf("%v.%v", prefix, desc.StreamName)
-		s.handlers[path] = serverStreamHandler(ss, desc.Handler)
+		s.handlers[path] = serverStreamHandler(ss, it, desc.Handler)
 		s.log.Infof("RegisterService: stream path => %v", path)
 	}
 

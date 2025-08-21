@@ -28,7 +28,7 @@ func Test_0(t *testing.T) {
 		return
 	}
 
-	service := NewServer(r, "node_01", logrus.StandardLogger())
+	service := NewServer(context.Background(), r, "node_01", logrus.StandardLogger())
 	testServer := &testgrpc.Server{}
 	testgrpc.RegisterTestServerServer(service, testServer)
 
